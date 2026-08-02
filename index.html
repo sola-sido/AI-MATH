@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 융합 수학 수업 설계 워크시트 (1, 2)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f3f4f6; }
+        .table-header { font-weight: 600; text-align: center; font-size: 0.9rem; padding: 12px; border: 1px solid #d1d5db; color: white; }
+        .table-cell { padding: 12px; border: 1px solid #d1d5db; font-size: 0.85rem; line-height: 1.6; vertical-align: top; }
+        .info-cell { padding: 8px 12px; border: 1px solid #d1d5db; font-size: 0.9rem; }
+        
+        /* 탭 버튼 스타일 */
+        .tab-btn { padding: 12px 24px; font-weight: bold; border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { background-color: white; color: #1e40af; border-top: 4px solid #1e40af; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-bottom: 2px solid white; transform: translateY(2px); z-index: 10; position: relative; }
+        .tab-btn.inactive { background-color: #e5e7eb; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c7c7cc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const App = () => {
+            // 현재 활성화된 탭 상태
+            const [activeTab, setActiveTab] = useState(1);
+
+            // 헤더 정보 상태 (공통)
+            const [headerInfo, setHeaderInfo] = useState({
+                schoolLevel: '',
+                grade: '',
+                unit: '',
+                customUnit: '',
+                standard: ''
+            });
+
+            // 워크시트 1 상태
+            const [ws1Steps, setWs1Steps] = useState([
+                { id: 1, title: '1단계: 문제 인식', goal: '', limit: '', aiRole: '', aiBoundary: '' },
+                { id: 2, title: '2단계: 해결 전략 수립', goal: '', limit: '', aiRole: '', aiBoundary: '' },
+                { id: 3, title: '3단계: 문제 해결 실행', goal: '', limit: '', aiRole: '', aiBoundary: '' },
+                { id: 4, title: '4단계: 결과 해석', goal: '', limit: '', aiRole: '', aiBoundary: '' },
+                { id: 5, title: '5단계: 일반화 및 전이', goal: '', limit: '', aiRole: '', aiBoundary: '' }
+            ]);
+
+            const ws1Examples = [
+                { 
+                    goalEx: '(예: 문제 상황 이해 및 핵심 정보 파악)\n상황과 맥락 속에서 수학적 문제를 이해하고, 해결해야 할 핵심을 파악(정보 해석, 문제 재구성, 의미 파악 등)', 
+                    limitEx: '(예: 모든 학생에게 동일한 사례를 제시하여 일부 학생은 흥미를 느끼지 못한다.)', 
+                    aiRoleEx: '(예: 맥락 기반 정보 제공)', 
+                    aiBoundaryEx: '(예: 스스로 핵심을 정의하도록)' 
+                },
+                { 
+                    goalEx: '(예: 해결 아이디어 생성 및 전략 계획 수립)\n자료, 사례, 수학적 표현 속에서 규칙, 경향, 구조를 찾아내고 관계를 파악', 
+                    limitEx: '(예: 질문을 떠올리지 못하는 학생은 교사의 질문만 기다리는 경향이 있다.)', 
+                    aiRoleEx: '(예: 질문 확장을 위한 힌트 제공)', 
+                    aiBoundaryEx: '(예: 질문 자체를 대신 만들어주지 않음)' 
+                },
+                { 
+                    goalEx: '(예: 계획 실행 및 과정 검토)', 
+                    limitEx: '(예: 수업 시간과 자료의 한계로 충분한 사례를 경험하지 못한다.)', 
+                    aiRoleEx: '(예: 다량의 데이터 시각화 및 사례 생성)', 
+                    aiBoundaryEx: '(예: 패턴과 규칙 발견은 학생 스스로 도출)' 
+                },
+                { 
+                    goalEx: '(예: 결과 의미 해석 및 타당성 판단)\n발견한 규칙과 관계를 바탕으로 수학적 개념을 구성하고 의미를 부여(추상화, 의미 연결, 정의 내리기)', 
+                    limitEx: '(예: 학생 수준에 맞는 다양한 난이도의 문제를 즉시 제공하기 어렵다.)', 
+                    aiRoleEx: '(예: 수준별 유사/변형 문제 맞춤형 생성)', 
+                    aiBoundaryEx: '(예: 문제 해결 전략의 선택은 학생 몫)' 
+                },
+                { 
+                    goalEx: '(예: 일반화 및 새로운 상황에 적용)\n특정 사례의 결과를 일반화하여 더 넓은 범위에 적용 가능한 원리로 확장(적용, 맥락 적용, 실생활 문제 해결 등)', 
+                    limitEx: '(예: 개별 피드백 시간이 부족하여 형식적인 정리에 그치는 경우가 많다.)', 
+                    aiRoleEx: '(예: 학습 데이터를 기반으로 개별 분석 리포트 제공)', 
+                    aiBoundaryEx: '(예: 최종 성찰과 수정 계획은 본인이 직접 작성)' 
+                }
+            ];
+
+            // 워크시트 2 상태 (aiType 초기값을 빈 문자열로 두어 콤보박스 선택 유도)
+            const [ws2Steps, setWs2Steps] = useState([
+                { id: 1, title: '도입 (문제 제시 전)', aiType: '', aiRole: '', studentAct: '', teacherRole: '', rule: '' },
+                { id: 2, title: '전개 ① (탐구/이해)', aiType: '', aiRole: '', studentAct: '', teacherRole: '', rule: '' },
+                { id: 3, title: '전개 ② (시각화/표현)', aiType: '', aiRole: '', studentAct: '', teacherRole: '', rule: '' },
+                { id: 4, title: '전개 ③ (분석/적용)', aiType: '', aiRole: '', studentAct: '', teacherRole: '', rule: '' },
+                { id: 5, title: '정리 (일반화/전이)', aiType: '', aiRole: '', studentAct: '', teacherRole: '', rule: '' }
+            ]);
+
+            // 워크시트 2 예시 데이터 (수정 안 함, AI 역할 등 그대로 유지)
+            const ws2Examples = [
+                { 
+                    aiRoleEx: '[진단자 (Diagnostician)]\n(예: 학습자의 배경지식 진단, 선수 개념 점검 및 수준 파악, 개념 오개념 탐색)', 
+                    studentActEx: '(예: 흥미 유발 자료 탐색 및 반응, 배경지식 떠올리기, 자신의 경험 연결하기)', 
+                    teacherRoleEx: '(예: 수업 목표 및 문제 제시, 학생 수준 진단 결과 확인, 학습 동기 유발 및 방향 안내)', 
+                    ruleEx: '(예: 학습자의 현재 상태 파악, 적절한 도전 과제 제시, 흥미와 의미 기반 연결)' 
+                },
+                { 
+                    aiRoleEx: '[발문자 (Questioner)]\n(예: 탐구 질문 생성 및 제안, 사고 확장을 위한 질문 제공, 다양한 관점 제시)', 
+                    studentActEx: '(예: 질문에 대해 탐구 및 토의, 다양한 자료 조사 및 분석, 자신의 생각 정리 및 표현)', 
+                    teacherRoleEx: '(예: 탐구 과정 설계 및 안내, 질문의 방향 조정 및 확장, 학생 사고 촉진 및 피드백)', 
+                    ruleEx: '(예: 사고의 깊이 확장 유도, 다양한 관점과 전략 지원, 스스로 탐구하도록 촉진)' 
+                },
+                { 
+                    aiRoleEx: '[시각화자 (Visualizer)]\n(예: 개념·관계 구조화 지원, 다양한 표현 형식 제공)', 
+                    studentActEx: '(예: 시각 자료 해석 및 정보 정리, 개념 간 관계 구조화, 자신의 아이디어 표현)', 
+                    teacherRoleEx: '(예: 시각 자료 해석 안내, 표현 방법 다양화 지도, 이해를 돕는 시각화 활용)', 
+                    ruleEx: '(예: 이해를 돕는 시각적 지원, 정보의 구조화 및 명확화, 다양한 표현 방식 존중)' 
+                },
+                { 
+                    aiRoleEx: '[분석자 (Analyst)]\n(예: 자료 분석 및 패턴 탐색 지원, 근거 기반 추론 및 검토 지원, 해결 전략 비교·평가 지원)', 
+                    studentActEx: '(예: 자료 분석 및 결과 해석, 근거를 바탕으로 주장 구성, 해결 전략 비교·평가)', 
+                    teacherRoleEx: '(예: 분석 도구 및 전략 안내, 근거 타당성 점검 지원, 심화 사고 및 적용 유도)', 
+                    ruleEx: '(예: 근거 기반 사고 강화, 자기주도적 문제 해결 촉진, 전이 및 일반화 유도)' 
+                },
+                { 
+                    aiRoleEx: '[조력자 (Facilitator)]\n(예: 새로운 상황으로의 전이 유도, 성찰 및 학습 정리 지원)', 
+                    studentActEx: '(예: 핵심 내용 정리 및 요약, 다른 상황에 적용해 보기, 학습 성찰 및 평가 수행)', 
+                    teacherRoleEx: '(예: 학습 내용 정리 및 일반화 안내, 전이 과제 제시 및 피드백, 성찰 및 평가 지원)', 
+                    ruleEx: '(예: 학습의 의미 연결 및 전이, 자기 성찰 및 성장 촉진, 지속 가능한 학습 경험 설계)' 
+                }
+            ];
+
+            const resultRef = useRef(null);
+
+            const handleHeaderChange = (e) => {
+                const { name, value } = e.target;
+                if (name === 'schoolLevel' && value === '고등학교') {
+                    setHeaderInfo({ ...headerInfo, [name]: value, unit: '직접입력' });
+                } else if (name === 'schoolLevel' && value !== '고등학교') {
+                    setHeaderInfo({ ...headerInfo, [name]: value, unit: '', customUnit: '' });
+                } else {
+                    setHeaderInfo({ ...headerInfo, [name]: value });
+                }
+            };
+
+            const handleWs1StepChange = (index, e) => {
+                const { name, value } = e.target;
+                const newSteps = [...ws1Steps];
+                newSteps[index] = { ...newSteps[index], [name]: value };
+                setWs1Steps(newSteps);
+            };
+
+            const handleWs2StepChange = (index, e) => {
+                const { name, value } = e.target;
+                const newSteps = [...ws2Steps];
+                newSteps[index] = { ...newSteps[index], [name]: value };
+                setWs2Steps(newSteps);
+            };
+
+            const downloadImage = () => {
+                if (resultRef.current) {
+                    html2canvas(resultRef.current, { scale: 2 }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = activeTab === 1 ? '워크시트1_기능재구성.png' : '워크시트2_AI개입설계.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    });
+                }
+            };
+
+            const copyTableToClipboard = () => {
+                const table = resultRef.current;
+                const range = document.createRange();
+                range.selectNode(table);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                alert("설계안이 클립보드에 복사되었습니다!\n구글 문서나 한글(HWP)에 붙여넣기 하세요.");
+            };
+
+            // 개입 유형에 따른 스타일 (색상) 반환 헬퍼 함수
+            const getAiTypeStyle = (type) => {
+                if(type.includes('진입')) return 'text-emerald-800 bg-emerald-50 border-emerald-200';
+                if(type.includes('촉진')) return 'text-blue-800 bg-blue-50 border-blue-200';
+                if(type.includes('확장')) return 'text-purple-800 bg-purple-50 border-purple-200';
+                return 'text-gray-500 bg-gray-50 border-gray-200';
+            };
+
+            const displayUnit = headerInfo.unit === '직접입력' ? headerInfo.customUnit : headerInfo.unit;
+
+            return (
+                <div className="max-w-[1600px] mx-auto p-4 flex flex-col h-screen overflow-hidden">
+                    
+                    {/* 최상단: 기본 정보 입력 (공통) */}
+                    <div className="bg-white p-4 rounded-xl shadow-md border-t-4 border-slate-800 shrink-0 mb-4 z-20 relative">
+                        <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <span className="text-xl">🔍</span> 기본 정보 입력
+                            </h2>
+                            <a href="https://stas.moe.go.kr/cmn/main" target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-1.5 px-3 rounded shadow-sm text-sm transition">
+                                <span>[2022 개정 성취수준 검색] ↗</span>
+                            </a>
+                        </div>
+                        
+                        <div className="flex gap-4 items-end">
+                            <div className="w-[15%]">
+                                <label className="block text-[11px] font-semibold mb-1 text-gray-600">학교급</label>
+                                <select name="schoolLevel" value={headerInfo.schoolLevel} onChange={handleHeaderChange} className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-slate-300 text-sm bg-white">
+                                    <option value="">선택</option>
+                                    <option value="초등학교">초등학교</option>
+                                    <option value="중학교">중학교</option>
+                                    <option value="고등학교">고등학교</option>
+                                </select>
+                            </div>
+                            <div className="w-[15%]">
+                                <label className="block text-[11px] font-semibold mb-1 text-gray-600">학년(군)</label>
+                                <input type="text" name="grade" value={headerInfo.grade} onChange={handleHeaderChange} placeholder="예: 1~3학년" className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-slate-300 text-sm" />
+                            </div>
+                            <div className="w-[20%]">
+                                <label className="block text-[11px] font-semibold mb-1 text-gray-600">영역(과목)</label>
+                                <div className="flex gap-1">
+                                    <select name="unit" value={headerInfo.unit} onChange={handleHeaderChange} className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-slate-300 text-sm bg-white">
+                                        <option value="">선택</option>
+                                        <option value="수와 연산">수와 연산</option>
+                                        <option value="변화와 관계">변화와 관계</option>
+                                        <option value="도형과 측정">도형과 측정</option>
+                                        <option value="자료와 가능성">자료와 가능성</option>
+                                        <option value="직접입력">직접입력(고등)</option>
+                                    </select>
+                                    {headerInfo.unit === '직접입력' && (
+                                        <input type="text" name="customUnit" value={headerInfo.customUnit} onChange={handleHeaderChange} placeholder="직접입력" className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-slate-300 text-sm" />
+                                    )}
+                                </div>
+                            </div>
+                            <div className="w-[50%]">
+                                <label className="block text-[11px] font-semibold mb-1 text-gray-600">성취기준명</label>
+                                <input type="text" name="standard" value={headerInfo.standard} onChange={handleHeaderChange} placeholder="검색한 성취기준을 여기에 붙여넣으세요." className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-slate-300 text-sm" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 탭 버튼 영역 */}
+                    <div className="flex px-4 border-b-2 border-e5e7eb z-10 relative">
+                        <div className={`tab-btn ${activeTab === 1 ? 'active' : 'inactive'} flex items-center gap-2`} onClick={() => setActiveTab(1)}>
+                            <span className="text-xl">📝</span> 워크시트 (1) : 기능 재구성 워크시트
+                        </div>
+                        <div className={`tab-btn ${activeTab === 2 ? 'active' : 'inactive'} flex items-center gap-2 ml-1`} onClick={() => setActiveTab(2)}>
+                            <span className="text-xl">🚀</span> 워크시트 (2) : AI 개입 지점 설계 카드
+                        </div>
+                    </div>
+
+                    {/* 탭 콘텐츠 영역 (좌:입력 / 우:결과) */}
+                    <div className="flex gap-6 flex-1 overflow-hidden pt-4 bg-white rounded-b-xl shadow-lg px-4 pb-4">
+                        
+                        {/* =========================================================================
+                            탭 1 콘텐츠: 수업 모형 기능 재구성 워크시트
+                        ========================================================================= */}
+                        {activeTab === 1 && (
+                            <>
+                                {/* 왼쪽 입력부 */}
+                                <div className="w-[38%] flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
+                                    
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                                        <h3 className="font-extrabold text-slate-800 mb-2 text-[13px] flex items-center gap-1 border-b border-slate-200 pb-2">
+                                            <span>🧠</span> 교육적 기능 분석의 핵심 질문 (3가지 관점)
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500 mb-3">각 단계별 <span className="font-bold text-indigo-600">'교육적 기능'</span>을 고민하실 때 아래 3가지 관점을 참고하세요.</p>
+                                        
+                                        <div className="flex gap-2 items-stretch">
+                                            <div className="w-1/3 bg-white border-t-4 border-green-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-bold text-green-700 mb-1">① 인지적 관점</div>
+                                                <div className="text-[10px] text-gray-500 font-semibold mb-1">(학습자의 인지 변화)</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3 mt-1 flex-1">
+                                                    <li>어떤 사고 과정이 필요한가?</li>
+                                                    <li>어떤 개념적 도약이 일어나는가?</li>
+                                                    <li>이전 지식과 어떻게 연결되는가?</li>
+                                                </ul>
+                                            </div>
+                                            <div className="w-1/3 bg-white border-t-4 border-blue-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-bold text-blue-700 mb-1">② 교수적 관점</div>
+                                                <div className="text-[10px] text-gray-500 font-semibold mb-1">(교사의 역할)</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3 mt-1 flex-1">
+                                                    <li>어떤 교수 전략/지원이 필요한가?</li>
+                                                    <li>학습 촉진을 위해 무엇을 설계하는가?</li>
+                                                    <li>평가/피드백은 어떻게 하는가?</li>
+                                                </ul>
+                                            </div>
+                                            <div className="w-1/3 bg-white border-t-4 border-purple-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-bold text-purple-700 mb-1">③ 활동적 관점</div>
+                                                <div className="text-[10px] text-gray-500 font-semibold mb-1">(학습자의 활동)</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3 mt-1 flex-1">
+                                                    <li>어떤 활동/자료/도구를 활용하는가?</li>
+                                                    <li>어떤 상호작용이 이루어지는가?</li>
+                                                    <li>스스로 조절/점검하는 과정은?</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {ws1Steps.map((step, index) => (
+                                        <div key={step.id} className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm shrink-0">
+                                            <div className="mb-3 border-b pb-2">
+                                                <input type="text" name="title" value={step.title} onChange={(e) => handleWs1StepChange(index, e)} className="w-full border-none font-bold text-indigo-800 text-base bg-transparent focus:ring-0 px-0" placeholder="단계명" />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-indigo-700 mb-1">교육적 기능</label>
+                                                    <input type="text" name="goal" value={step.goal} onChange={(e) => handleWs1StepChange(index, e)} className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1" placeholder="선생님의 수업 목표를 적어주세요." />
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws1Examples[index].goalEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-red-600 mb-1">현재의 한계</label>
+                                                    <input type="text" name="limit" value={step.limit} onChange={(e) => handleWs1StepChange(index, e)} className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1" placeholder="기존 수업에서 아쉬웠던 점을 적어주세요." />
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws1Examples[index].limitEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-emerald-700 mb-1">AI 결합 방향</label>
+                                                    <textarea name="aiRole" value={step.aiRole} onChange={(e) => handleWs1StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1" placeholder="AI 도구를 어떻게 활용할지 적어주세요."></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws1Examples[index].aiRoleEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-orange-600 mb-1">AI 개입의 경계</label>
+                                                    <textarea name="aiBoundary" value={step.aiBoundary} onChange={(e) => handleWs1StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1" placeholder="학생의 사고를 보호하기 위한 원칙을 적어주세요."></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws1Examples[index].aiBoundaryEx}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* 오른쪽 결과물 */}
+                                <div className="w-[62%] flex flex-col overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-4 shrink-0">
+                                        <h2 className="text-lg font-bold text-gray-800">📄 워크시트 (1) 결과물</h2>
+                                        <div className="space-x-2 flex">
+                                            <button onClick={copyTableToClipboard} className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition">📋 복사</button>
+                                            <button onClick={downloadImage} className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition">🖼️ 캡처</button>
+                                        </div>
+                                    </div>
+                                    <div ref={resultRef} className="bg-white p-6 rounded-xl border border-gray-200 shrink-0" style={{ backgroundColor: 'white' }}>
+                                        <h1 className="text-2xl font-extrabold text-center text-gray-900 mb-6">[워크시트 1] 수업 모형 기능 재구성 워크시트</h1>
+                                        
+                                        {/* 헤더 표 */}
+                                        <table className="w-full border-collapse border border-gray-400 mb-4">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">학교급</td>
+                                                    <td className="info-cell w-[15%] text-center text-xs">{headerInfo.schoolLevel}</td>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">학년(군)</td>
+                                                    <td className="info-cell w-[15%] text-center text-xs">{headerInfo.grade}</td>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">영역(단원)</td>
+                                                    <td className="info-cell text-center font-medium text-xs">{displayUnit}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="info-cell bg-gray-100 font-bold text-center text-xs">성취기준</td>
+                                                    <td className="info-cell text-xs font-medium" colSpan="5">{headerInfo.standard}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        {/* 교재 표 5-1 스타일 */}
+                                        <table className="w-full border-collapse border border-gray-800">
+                                            <thead>
+                                                <tr>
+                                                    <th className="table-header bg-slate-100 text-slate-900 w-[18%] border-gray-400 border-2">단계</th>
+                                                    <th className="table-header bg-slate-100 text-slate-900 w-[20%] border-gray-400 border-2">교육적 기능</th>
+                                                    <th className="table-header bg-slate-100 text-slate-900 w-[20%] border-gray-400 border-2">현재의 한계</th>
+                                                    <th className="table-header bg-slate-100 text-slate-900 w-[22%] border-gray-400 border-2">AI 결합 방향</th>
+                                                    <th className="table-header bg-slate-100 text-slate-900 w-[20%] border-gray-400 border-2">AI 개입의 경계</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {ws1Steps.map((step, index) => (
+                                                    <tr key={index}>
+                                                        <td className="table-cell font-bold text-center bg-slate-50 border-gray-400">
+                                                            {step.title.split(': ')[0]}<br/>
+                                                            <span className="text-xs font-semibold text-indigo-900 mt-1 block">{step.title.split(': ')[1]}</span>
+                                                        </td>
+                                                        <td className="table-cell font-medium text-indigo-900 border-gray-400 whitespace-pre-wrap">{step.goal}</td>
+                                                        <td className="table-cell text-red-800 border-gray-400 whitespace-pre-wrap">{step.limit}</td>
+                                                        <td className="table-cell text-emerald-900 border-gray-400 whitespace-pre-wrap">{step.aiRole}</td>
+                                                        <td className="table-cell font-bold text-orange-800 border-gray-400 whitespace-pre-wrap bg-orange-50/20">{step.aiBoundary}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="mt-4 text-right text-xs text-gray-500 font-medium">
+                                            * AIEDAP 심화 연수 워크시트 (기능 재구성 워크시트)
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* =========================================================================
+                            탭 2 콘텐츠: AI 개입 지점 설계 카드 (교재 131쪽 기준)
+                        ========================================================================= */}
+                        {activeTab === 2 && (
+                            <>
+                                {/* 왼쪽 입력부 */}
+                                <div className="w-[38%] flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
+                                    
+                                    {/* 💡 새로 추가된: 3가지 개입 유형 가이드 박스 */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                                        <h3 className="font-extrabold text-slate-800 mb-2 text-[13px] flex items-center gap-1 border-b border-slate-200 pb-2">
+                                            <span>⚡</span> AI 개입 유형의 3가지 관점
+                                        </h3>
+                                        <p className="text-[11px] text-slate-500 mb-3">수업의 융합 내용에 따라 아래의 3가지 AI 개입 유형 중 하나를 선택하세요.</p>
+                                        
+                                        <div className="flex flex-col gap-2">
+                                            <div className="bg-white border-l-4 border-emerald-600 rounded p-2 shadow-sm">
+                                                <div className="text-[11px] font-extrabold text-emerald-800 mb-1 flex items-center gap-1">
+                                                    <span>1. 진입 (Entry)</span>
+                                                    <span className="text-[9px] text-emerald-600 font-normal">학습을 시작할 수 있도록 돕는 단계</span>
+                                                </div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li><strong>핵심 목적:</strong> 문제 상황에 주의를 집중시키고, 배경지식을 활성화하여 탐구의 출발점을 만든다.</li>
+                                                    <li>주의 환기 및 동기 유발, 배경지식 확인, 문제 이해를 위한 정보 제공</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="bg-white border-l-4 border-blue-600 rounded p-2 shadow-sm">
+                                                <div className="text-[11px] font-extrabold text-blue-800 mb-1 flex items-center gap-1">
+                                                    <span>2. 촉진 (Facilitation)</span>
+                                                    <span className="text-[9px] text-blue-600 font-normal">학습자의 탐구를 활성화하고 확장하는 단계</span>
+                                                </div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li><strong>핵심 목적:</strong> 탐구 과정에서 사고를 넓히고, 질문을 생성하며, 깊이 있는 이해와 문제 해결을 촉진한다.</li>
+                                                    <li>질문 생성 및 탐구 방향 제안, 다양한 자료·사례 제공, 피드백 및 힌트 제공</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="bg-white border-l-4 border-purple-600 rounded p-2 shadow-sm">
+                                                <div className="text-[11px] font-extrabold text-purple-800 mb-1 flex items-center gap-1">
+                                                    <span>3. 확장 (Expansion)</span>
+                                                    <span className="text-[9px] text-purple-600 font-normal">학습 결과를 일반화하고 전이하는 단계</span>
+                                                </div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li><strong>핵심 목적:</strong> 학습 내용을 일반화하고, 새로운 상황에 적용·전이하여 심화 학습으로 연결한다.</li>
+                                                    <li>일반화 및 원리 도출 지원, 새로운 문제/상황 생성, 전이 및 응용 과제 제안</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 🤖 AI 지원 역할 설계의 4가지 관점 (기존 유지) */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                                        <h3 className="font-extrabold text-slate-800 mb-2 text-[13px] flex items-center gap-1 border-b border-slate-200 pb-2">
+                                            <span>🤖</span> AI 지원 역할 설계의 4가지 관점
+                                        </h3>
+                                        
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="bg-white border-l-4 border-blue-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-extrabold text-blue-800 flex items-center gap-1">
+                                                    <span>① 진단자</span>
+                                                    <span className="text-[9px] text-gray-400 font-normal ml-auto">Diagnostician</span>
+                                                </div>
+                                                <div className="text-[9px] text-blue-600 font-medium my-1 pb-1 border-b border-blue-50">"학습자는 무엇을 이해했고, 무엇을 더 알아야 할까?"</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li>이해도 진단 및 오개념 탐지</li>
+                                                    <li>선수 지식 및 배경지식 파악</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="bg-white border-l-4 border-green-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-extrabold text-green-800 flex items-center gap-1">
+                                                    <span>② 발문자</span>
+                                                    <span className="text-[9px] text-gray-400 font-normal ml-auto">Questioner</span>
+                                                </div>
+                                                <div className="text-[9px] text-green-600 font-medium my-1 pb-1 border-b border-green-50">"다른 관점에서 생각하면 어떤 질문을 할 수 있을까?"</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li>핵심 질문 및 후속 질문 생성</li>
+                                                    <li>사고 수준을 높이는 발문 제공</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="bg-white border-l-4 border-purple-600 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-extrabold text-purple-800 flex items-center gap-1">
+                                                    <span>③ 시각화자</span>
+                                                    <span className="text-[9px] text-gray-400 font-normal ml-auto">Visualizer</span>
+                                                </div>
+                                                <div className="text-[9px] text-purple-600 font-medium my-1 pb-1 border-b border-purple-50">"이 정보를 더 잘 이해할 수 있도록 어떻게 시각적으로 표현할 수 있을까?"</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li>개념, 관계, 과정의 시각적 표현</li>
+                                                    <li>자료, 데이터, 아이디어 시각화</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="bg-white border-l-4 border-orange-500 rounded p-2 shadow-sm flex flex-col">
+                                                <div className="text-[11px] font-extrabold text-orange-700 flex items-center gap-1">
+                                                    <span>④ 분석자</span>
+                                                    <span className="text-[9px] text-gray-400 font-normal ml-auto">Analyst</span>
+                                                </div>
+                                                <div className="text-[9px] text-orange-600 font-medium my-1 pb-1 border-b border-orange-50">"이 결과는 무엇을 의미하며, 어떻게 활용할 수 있을까?"</div>
+                                                <ul className="text-[9px] text-gray-600 leading-tight space-y-1 list-disc pl-3">
+                                                    <li>자료 분석 및 패턴, 경향 탐색</li>
+                                                    <li>결과 해석 및 의미 도출</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {ws2Steps.map((step, index) => (
+                                        <div key={step.id} className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm shrink-0">
+                                            <div className="flex justify-between items-center mb-3 border-b pb-2">
+                                                <input type="text" name="title" value={step.title} onChange={(e) => handleWs2StepChange(index, e)} className="w-[50%] border-none font-bold text-blue-900 bg-transparent focus:ring-0 px-0 text-sm" placeholder="단계명 (예: 도입)" />
+                                                <select 
+                                                    name="aiType" 
+                                                    value={step.aiType} 
+                                                    onChange={(e) => handleWs2StepChange(index, e)} 
+                                                    className={`w-[48%] border p-1 rounded text-xs font-bold bg-white text-gray-700 focus:ring-2 focus:ring-blue-300 shadow-sm`}
+                                                >
+                                                    <option value="">개입유형 3가지 중 선택</option>
+                                                    <option value="1. 진입 (Entry)">1. 진입 (Entry)</option>
+                                                    <option value="2. 촉진 (Facilitation)">2. 촉진 (Facilitation)</option>
+                                                    <option value="3. 확장 (Expansion)">3. 확장 (Expansion)</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-green-700 mb-1">AI의 역할</label>
+                                                    <textarea name="aiRole" value={step.aiRole} onChange={(e) => handleWs2StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1" placeholder="위 가이드를 참고하여 AI의 역할을 정의해주세요."></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws2Examples[index].aiRoleEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-purple-700 mb-1">학습자 활동</label>
+                                                    <textarea name="studentAct" value={step.studentAct} onChange={(e) => handleWs2StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1"></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws2Examples[index].studentActEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-orange-600 mb-1">교사 역할</label>
+                                                    <textarea name="teacherRole" value={step.teacherRole} onChange={(e) => handleWs2StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1"></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws2Examples[index].teacherRoleEx}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-red-600 mb-1">설계 원칙</label>
+                                                    <textarea name="rule" value={step.rule} onChange={(e) => handleWs2StepChange(index, e)} rows="2" className="w-full border border-gray-300 p-1.5 rounded text-xs mb-1"></textarea>
+                                                    <p className="text-[10px] text-gray-500 pl-1 leading-tight whitespace-pre-wrap">{ws2Examples[index].ruleEx}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* 오른쪽 결과물 */}
+                                <div className="w-[62%] flex flex-col overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-4 shrink-0">
+                                        <h2 className="text-lg font-bold text-gray-800">📄 워크시트 (2) 결과물</h2>
+                                        <div className="space-x-2 flex">
+                                            <button onClick={copyTableToClipboard} className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition">📋 복사</button>
+                                            <button onClick={downloadImage} className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded shadow text-xs font-semibold transition">🖼️ 캡처</button>
+                                        </div>
+                                    </div>
+                                    <div ref={resultRef} className="bg-white p-6 rounded-xl border border-gray-200 shrink-0" style={{ backgroundColor: 'white' }}>
+                                        <h1 className="text-2xl font-extrabold text-center text-gray-900 mb-6">[워크시트 2] AI 개입 지점 설계 카드</h1>
+                                        
+                                        {/* 헤더 표 */}
+                                        <table className="w-full border-collapse border border-gray-400 mb-4">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">학교급</td>
+                                                    <td className="info-cell w-[15%] text-center text-xs">{headerInfo.schoolLevel}</td>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">학년(군)</td>
+                                                    <td className="info-cell w-[15%] text-center text-xs">{headerInfo.grade}</td>
+                                                    <td className="info-cell bg-gray-100 font-bold w-20 text-center text-xs">영역(단원)</td>
+                                                    <td className="info-cell text-center font-medium text-xs">{displayUnit}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="info-cell bg-gray-100 font-bold text-center text-xs">성취기준</td>
+                                                    <td className="info-cell text-xs font-medium" colSpan="5">{headerInfo.standard}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        {/* 표 5-2 스타일 */}
+                                        <table className="w-full border-collapse border border-gray-400">
+                                            <thead>
+                                                <tr>
+                                                    <th className="table-header w-[14%] bg-slate-100 text-slate-800 border-gray-400">수업 단계</th>
+                                                    <th className="table-header w-[16%] bg-slate-100 text-slate-800 border-gray-400">개입 유형</th>
+                                                    <th className="table-header w-[17.5%] bg-green-50 text-green-900 border-gray-400">AI의 역할</th>
+                                                    <th className="table-header w-[17.5%] bg-purple-50 text-purple-900 border-gray-400">학습자 활동</th>
+                                                    <th className="table-header w-[17.5%] bg-orange-50 text-orange-900 border-gray-400">교사 역할</th>
+                                                    <th className="table-header w-[17.5%] bg-red-50 text-red-900 border-gray-400">설계 원칙</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {ws2Steps.map((step, index) => {
+                                                    const style = getAiTypeStyle(step.aiType);
+                                                    return (
+                                                        <tr key={index}>
+                                                            <td className="table-cell font-bold text-center bg-slate-50 border-gray-400">
+                                                                {step.title.split(' ')[0]}<br/>
+                                                                <span className="text-[11px] font-semibold text-slate-600 mt-1 block whitespace-pre-wrap">{step.title.substring(step.title.indexOf(' ')+1)}</span>
+                                                            </td>
+                                                            <td className={`table-cell text-center font-bold border-gray-400 align-middle ${style}`}>
+                                                                {step.aiType ? (
+                                                                    <>
+                                                                        <span className="text-[13px]">{step.aiType.split(' (')[0]}</span><br/>
+                                                                        <span className="text-[10px] font-medium mt-1 block whitespace-pre-wrap text-gray-500">({step.aiType.split(' (')[1]}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-gray-400 text-xs font-normal">유형을<br/>선택하세요</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="table-cell font-medium text-green-900 border-gray-400 whitespace-pre-wrap">{step.aiRole}</td>
+                                                            <td className="table-cell font-medium text-purple-900 border-gray-400 whitespace-pre-wrap">{step.studentAct}</td>
+                                                            <td className="table-cell font-medium text-orange-900 border-gray-400 whitespace-pre-wrap">{step.teacherRole}</td>
+                                                            <td className="table-cell font-bold text-red-800 border-gray-400 whitespace-pre-wrap bg-red-50/10">{step.rule}</td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                        <div className="mt-4 text-right text-xs text-gray-500 font-medium">
+                                            * AIEDAP 심화 연수 워크시트 (AI 개입 지점 설계 카드 기준)
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
